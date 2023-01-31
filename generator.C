@@ -13,7 +13,7 @@ void generator()
   double A = 1e6;
   double t_w = 20e-6;
   double tau = 140e-9;
-  int N = 1000; //int(A*t_w);
+  int N = int(A*t_w);
   double prompt, hit;
   vector<pair<double, double>> hits;
   hist_prompt= new TH1D("hist_prompt","hist_prompt",100, 0,t_w*1.1);
