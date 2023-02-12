@@ -19,6 +19,7 @@ void efficiency()
   double t_acc = 200e-9;
   int num_1, num_2 = 0;
   int num_wrong, num_prop = 0;
+  int num_wrong_1, num_wrong_2 = 0;
   double U1, U2 = 0;
   double ef_prompt = 5*0.1;
   double ef_hit = 5*0.1*0.1*0.1;
@@ -37,7 +38,13 @@ void efficiency()
   }
   sort(hits.begin(), hits.end());
   for(int i = 0; i < N-1; i++){
-    if(hits[i][1] - hits[i+1][0] > 0) num_wrong++;
+    if(hits[i+1][2] > 0.5 && hits[i][3] > 0.5){
+      if(hits[i][1] - hits[i+1][0] > 0){
+        num_wrong++;
+        if(hits[i][1] - hits[i+1][0] < t_acc) num_wrong_2++;
+        if(hits[i][1] - hits[i+1][0] > t_acc) num_wrong_1++;
+      }
+    }
   }
   for(int i = 0; i < N; i++){
     //cout<<hits[i][0]<<", "<<hits[i][0]<<", "<<hits[i][2]<<", "<<hits[i][3]<<endl;
@@ -54,4 +61,5 @@ void efficiency()
   }
   cout<<"N: "<<N<<", True (delta(t) < tw): "<<num_prop<<", delta(t) > tw: "<<num_1<<", missing prompt and delta(t) < tw: "<<num_2<<endl;
   cout<<"Wrong order: "<<num_wrong<<endl;
+  cout<<"Wrong order and delta(t) < tw: "<<num_wrong_1<<", Wrong order and delta(t) > tw: "<<num_wrong_2<<endl;
 }
