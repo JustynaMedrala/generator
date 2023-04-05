@@ -9,25 +9,50 @@ TH1F* hist_Edep_deex =nullptr;
 TH1F* hist_Edep_deex_s =nullptr;
 TH1F* hist_Ek =nullptr;
 TH1F* hist_ops_energy =nullptr;
+TH1F* hist_Edep_color =nullptr;
+TH1F* hist_Edep_color_s =nullptr;
+
+void part_of_hist(TH1F* hist, TH1F* hist_part, double min_value, double max_value){
+  int min = hist->FindBin(min_value);
+  int max = hist->FindBin(max_value);
+  cout<<min<<", "<<max<<endl;
+  for(int i = min; i < max; i++){
+    //cout<<hist->GetBinContent(i)<<endl;
+    hist_part->AddBinContent(i, hist->GetBinContent(i));
+    //cout<<hist_part->GetBinContent(i)<<endl;
+  }
+  hist_part->Draw("hist");
+  //return hist_part;
+}
+
+double en_dep(TF1* f, double E0){
+    double Ek, theta;
+    f->SetParameter(0, E0);
+    theta = f->GetRandom();
+    Ek = E0/(1+E0*(1-cos(theta)));
+    return (E0-Ek);
+}
 
 void energy(){
   TRandom3 gen;
   gen.SetSeed(0);
-  TF1 *f = new TF1("f","1/(1+(1-cos(x)))^2*(1+(1-cos(x))+1/(1+(1-cos(x)))-(sin(x))^2)",0,TMath::Pi()); 
+  TF1 *f = new TF1("f","1/(1+[0]*(1-cos(x)))^2*(1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2)/2",0,TMath::Pi());
   double theta = f->GetRandom(); 
   double E0 = 1;
   double Ek = 0;
   double Edep = E0 - Ek;
-  int N = int(1e6);
+  int N = int(1e3);
   double sigma = 0;
   double Energy = 0;
 
-  hist_Edep = new TH1F("hist_Edep","hist_Edep",100,0,520);
+  hist_Edep = new TH1F("hist_Edep","hist_Edep",100,0,1274);
   hist_Edep_s = new TH1F("hist_Edep_smear", "hist_Edep_smear", 100, 0, 1274);
   hist_Edep_deex = new TH1F("hist_Edep_deex", "hist_Edep_deex", 100, 0, 1274);
   hist_Edep_deex_s = new TH1F("hist_Edep_deex_smear", "hist_Edep_deex_smear", 100, 0, 1274);
   hist_Ek = new TH1F("hist_Ek","hist_Ek",100, 0,1.5);
   hist_ops_energy = new TH1F("hist_ops_energy", "hist_ops_energy", 100, 0, 1274);
+  hist_Edep_color = new TH1F("hist_Edep_color","hist_Edep_color",100,0,1274);
+  hist_Edep_color_s = new TH1F("hist_Edep_color_s","hist_Edep_color_s",100,0,1274);
 
   TFile *hfile = 0;
   hfile = TFile::Open("energies.root","READ");
@@ -42,9 +67,8 @@ void energy(){
   }
 
   for(int i = 0; i<N; i++){
-    theta = f->GetRandom();
-    Ek = E0/(1+E0*(1-cos(theta)));
-    Edep = (E0-Ek);
+    Edep = en_dep(f, E0);
+    //cout<<Edep<<endl;
     hist_Edep->Fill(Edep*511);
     sigma = sqrt(Edep)*0.044*0.511;
     Edep = gen.Gaus(Edep*0.511, sigma)/0.511;
@@ -52,18 +76,29 @@ void energy(){
     hist_Ek->Fill(Ek);
   }
   /////////////////////////////////
+  //cout<<2<<endl;
+  /////////////////////////////////
+  //cout<<3<<endl;
   for(int i = 0; i<N; i++){
-    theta = f->GetRandom();
     E0 = 1274./511.;
-    Ek = E0/(1+E0*(1-cos(theta)));
-    Edep = (E0-Ek);
+    Edep = en_dep(f, E0);
     hist_Edep_deex->Fill(Edep*511);
     sigma = sqrt(Edep)*0.044*0.511;
     Edep = gen.Gaus(Edep*0.511, sigma)/0.511;
     hist_Edep_deex_s->Fill(Edep*511);
   }
-
-  TCanvas *c = new TCanvas();
+  /////////////////////////////////
+  hist_Edep_deex_s->Scale(1.0/hist_Edep_deex_s->GetEntries());
+  hist_ops_energy->Scale(1.0/hist_ops_energy->GetEntries());
+  hist_Edep_s->Scale(1.0/hist_Edep->GetEntries());
+  hist_Edep->Scale(1.0/hist_Edep->GetEntries());
+  hist_Edep_deex->Scale(1.0/hist_Edep_deex->GetEntries());
+  /////////////////////////////////
+  part_of_hist(hist_Edep, hist_Edep_color, 0.3*511, 0.8*511);
+  part_of_hist(hist_Edep_s, hist_Edep_color_s, 0.3*511, 0.8*511);
+  //for(int i=0; i<100; i++)  cout<<hist_Edep_color->GetBinContent(i)<<endl;
+  /////////////////////////////////
+  TCanvas *c = new TCanvas(" ", " ", 900, 800);
   gStyle->SetOptStat(0);
   ////////////////////////////////////
   f->SetTitle("  ");
@@ -76,17 +111,17 @@ void energy(){
   auto *l_min = new TLine(0.3*511, 0, 0.3*511, 0.06);
   auto *l_max = new TLine(0.8*511, 0, 0.8*511, 0.06);
   ///////////////////////////////////
+  hist_Edep_color_s->SetFillStyle(1001);
   hist_ops_energy->SetTitle("   ");
-  hist_ops_energy->GetXaxis()->SetTitle("E_{dep}");
+  hist_ops_energy->GetXaxis()->SetTitle("E_{dep} [keV]");
   hist_ops_energy->SetLineColor(kGreen);
+  hist_Edep_color_s->SetFillColorAlpha(kBlack, 0.3);
   hist_Edep_deex_s->SetLineColor(kViolet);
   l_tres->SetLineColor(kRed);
-  hist_Edep_deex_s->Scale(1.0/hist_Edep_deex_s->GetEntries());
-  hist_ops_energy->Scale(1.0/hist_ops_energy->GetEntries());
-  hist_Edep_s->Scale(1.0/hist_Edep->GetEntries());
   hist_ops_energy->Draw("hist");
   hist_Edep_s->Draw("same hist");
   hist_Edep_deex_s->Draw("same hist");
+  hist_Edep_color_s->Draw("same hist");
   l_tres->Draw("same");
   l_min->Draw("same");
   l_max->Draw("same");
@@ -98,14 +133,15 @@ void energy(){
   legend->AddEntry(l_tres, "detector threshold", "l");
   legend->Draw(); 
 
-  c->SaveAs("../plots/hist_Edep_ws.png");
+  c->SaveAs("../plots/hist_Edep_ws.pdf");
   ///////////////////////////////////
+  hist_Edep_color->SetFillStyle(1001);
+  hist_Edep_color->SetFillColorAlpha(kBlack, 0.3);
   hist_Edep_deex->SetLineColor(kViolet);
-  hist_Edep->Scale(1.0/hist_Edep->GetEntries());
-  hist_Edep_deex->Scale(1.0/hist_Edep_deex->GetEntries());
   hist_ops_energy->Draw("hist");
   hist_Edep->Draw("same hist");
   hist_Edep_deex->Draw("same hist");
+  hist_Edep_color->Draw("same hist");
   l_tres->Draw("same");
   l_min->Draw("same");
   l_max->Draw("same");
@@ -117,7 +153,7 @@ void energy(){
   legend1->AddEntry(l_tres, "detector threshold", "l");
   legend1->Draw();
 
-  c->SaveAs("../plots/hist_Edep_wos.png");
+  c->SaveAs("../plots/hist_Edep_wos.pdf");
   //////////////////////////////////
   hist_Ek->SetTitle("   ");
   hist_Ek->GetXaxis()->SetTitle("E_{#gamma'}");

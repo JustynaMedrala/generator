@@ -23,7 +23,9 @@ void eff_E0(){
   int N = 21;
   int M = int(1e6);
   float m[N];
-
+  double me = 511;
+  double mu = 0;
+ 
   for(int i=0; i<N; i++){
     m[i] = float(i)/float(N-1);
   }
@@ -51,7 +53,9 @@ void eff_E0(){
 
   
   for(int i = 0; i < N; i++){
-    E0 = sqrt(m[i]*(4-m[i]))-m[i];
+    mu = 2*me*m[i];
+    E0 = me*(1-mu*mu/me/me/4.);//sqrt(mu*(4*me-mu))-mu;
+    E0 = E0/511.;
     cout<<E0<<endl;
     f->SetParameter(0, E0);
     hist_Edep = new TH1F("hist_Edep","hist_Edep",100,0,511);

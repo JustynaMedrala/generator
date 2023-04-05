@@ -51,9 +51,9 @@ void efficiency()
     if(hits[i][1] - hits[i][0] < t_acc && hits[i][2] > 0.5 && hits[i][3] > 0.5) num_prop++;
     if(hits[i][1] - hits[i][0] > t_acc && hits[i][2] > 0.5 && hits[i][3] > 0.5) num_1++;
     if(hits[i][2] < 0.5){
-      for(int wrong_i = i; wrong_i < N; wrong_i++){
+      for(int wrong_i = i+1; wrong_i < N; wrong_i++){
         if(hits[wrong_i][2] > 0.5){
-          if(hits[i][1] - hits[wrong_i][0] < t_acc && hits[wrong_i][2] > 0.5 && hits[i][3] > 0.5) num_2++;
+          if(hits[i][1] - hits[wrong_i][0] < t_acc && hits[i][3] > 0.5) {num_2++;}
           break;
         }
       }

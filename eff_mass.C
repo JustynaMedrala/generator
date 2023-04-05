@@ -12,6 +12,26 @@ TGraph* graph_diff =nullptr;
 TGraph* graph_E =nullptr;
 TGraph* graph_br =nullptr;
 
+void plot(TCanvas *c, int num, bool leg_opt, TGraph* graph1, const char *label1, TGraph* graph2, const char *label2, const char *title, const char *x_label, const char *y_label, const char *name){
+  gPad->SetLeftMargin(0.13);
+  graph1->SetTitle(title);
+  graph1->GetXaxis()->SetTitle(x_label);
+  graph1->GetYaxis()->SetTitle(y_label);
+  graph1->SetMarkerStyle(20);
+  graph1->Draw("AP");
+  if(num > 1){
+    graph2->SetMarkerColor(kRed); 
+    graph2->SetMarkerStyle(20);
+    graph2->Draw("same P");}
+  if(leg_opt == 1){
+    auto legend = new TLegend(0.65,0.2,0.9,0.4);
+    legend->AddEntry(graph1,label1,"p");
+    legend->AddEntry(graph2,label2,"p");
+    legend->Draw();
+  }
+  c->SaveAs(name);
+}
+
 void eff_mass(){
   TRandom3 gen;
   gen.SetSeed(0);
@@ -28,7 +48,7 @@ void eff_mass(){
     m[i] = float(i)/float(N-1);
   }
 
-  TCanvas *c1 = new TCanvas();  
+  TCanvas *c = new TCanvas(" ", " ", 900, 800); 
   graph_eff = new TGraph(N);
   graph_eff_smear = new TGraph(N);
   graph_diff = new TGraph(N);
@@ -37,14 +57,14 @@ void eff_mass(){
 
   for(int i = 0; i < N; i++){
     mu = 2*me*m[i];
-    E0 = sqrt(mu*(4*me-mu))-mu;
+    E0 = me*(1-mu*mu/me/me/4.);//sqrt(mu*(4*me-mu))-mu;
     f->SetParameter(0, E0);
     hist_Edep = new TH1F("hist_Edep","hist_Edep",100,0,1);
     hist_Edep_smear = new TH1F("hist_Edep_with_smear", "hist_Edep_with_smear",100,0,1);
     for(int j = 0; j < M; j++){
       theta = f->GetRandom();
-      Ek = E0/(1+E0*(1-cos(theta)));
-      Edep = E0 - Ek;
+      Ek = E0/(1+E0/me*(1-cos(theta)));
+      Edep = (E0 - Ek)/511.;
       hist_Edep->Fill(Edep);     
  
       sigma = sqrt(Edep)*0.044*0.511;
@@ -59,64 +79,27 @@ void eff_mass(){
     graph_eff->SetPoint(i, m[i], eff*100);
     graph_eff_smear->SetPoint(i, m[i], eff_smear*100);
     graph_diff->SetPoint(i, m[i], (eff-eff_smear)*100);
-    graph_br->SetPoint(i, m[i], 4*(1-m[i]*m[i]));
+    graph_br->SetPoint(i, m[i], 3.5e-8*(1-m[i]*m[i]));
     if(i == N-1){
       string tit = "E0 =";
       const char *title = (tit+to_string(E0)).c_str();
-      hist_Edep->SetTitle(title);
-      hist_Edep->Draw();
-      c1->SaveAs("../plots/hist_Edep_max_m.png");}
+      hist_Edep_smear->SetTitle(title);
+      hist_Edep_smear->Draw();
+      c->SaveAs("../plots/hist_Edep_max_m.png");}
     hist_Edep->Delete();
     hist_Edep_smear->Delete();
   }
   //Drawing
   ////////////////////////////////////////////////////////////////////////
-  graph_eff->SetTitle("Efficiency vs m_{u}");
-  graph_eff->GetXaxis()->SetTitle("#frac{m_{u}}{2m_{e}}");
-  graph_eff->GetYaxis()->SetTitle("Efficiency [%]");
-  graph_eff->SetMarkerStyle(20);
-  graph_eff->SetMarkerSize(1.);
-  graph_eff_smear->SetMarkerStyle(20);
-  graph_eff_smear->SetMarkerColor(kRed);
-  graph_eff->Draw("AP");
-  graph_eff_smear->Draw("same P");
-
-  auto legend = new TLegend(0.65,0.2,0.9,0.4);
-  legend->AddEntry(graph_eff,"energy without smear","p");
-  legend->AddEntry(graph_eff_smear,"energy with smear","p");
-  legend->Draw();
-  
-  c1->SaveAs("../plots/Efficiency.png");
+  plot(c, 2, 1, graph_eff_smear,"energy with smear", graph_eff, "energy without smear", "Efficiency vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Efficiency [%]", "../plots/Efficiency.png");    
 
   ////////////////////////////////////////////////////////////////////////
-  graph_diff->SetTitle("Difference in efficiencies vs m_{u}");
-  graph_diff->GetXaxis()->SetTitle("#frac{m_{u}}{2m_{e}}");
-  graph_diff->GetYaxis()->SetTitle("Difference in efficiencies [%]");
-  graph_diff->SetMarkerStyle(20);
-  graph_diff->SetMarkerSize(1.);
-  graph_diff->Draw("AP");
-  
-  c1->SaveAs("../plots/Difference_efficiency.png");
+  plot(c, 1, 0, graph_diff,nullptr, nullptr, nullptr, "Difference in efficiencies vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Difference in efficiencies [%]", "../plots/Difference_efficiency.png");
   
   ////////////////////////////////////////////////////////////////////////
-  graph_E->SetTitle("Energy vs m_{u}");
-  graph_E->GetXaxis()->SetTitle("#frac{m_{u}}{2m_{e}}");
-  graph_E->GetYaxis()->SetTitle("Energy E_{#gamma} [keV]");
-  graph_E->SetMarkerStyle(20);
-  graph_E->SetMarkerSize(1.);
-  graph_E->Draw("AP");
+  plot(c, 1, 0, graph_E,nullptr, nullptr, nullptr, "Energy vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Energy E_{#gamma} [keV]", "../plots/Energy_vs_mu.png");
   
-  c1->SaveAs("../plots/Energy_vs_mu.png");
   ////////////////////////////////////////////////////////////////////////////
-  graph_br->SetTitle("Branching ratio vs m_{u}");
-  graph_br->GetXaxis()->SetTitle("#frac{m_{u}}{2m_{e}}");
-  graph_br->GetYaxis()->SetTitle("Branching ratio");
-  graph_br->SetMarkerStyle(20);
-  graph_br->SetMarkerSize(1.);
-  graph_br->Draw("AP");
-
-  c1->SaveAs("../plotsBranching_ratio_vs_mu.png");
-
-
+  plot(c, 1, 0, graph_br,nullptr, nullptr, nullptr, "Branching ratio vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Branching ratio", "../plots/Branching_ratio_vs_mu.png");  
 
 }
