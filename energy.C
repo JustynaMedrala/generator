@@ -1,7 +1,17 @@
+#include <TROOT.h>
+#include <TStyle.h>
+#include <TTree.h>
 #include <TRandom3.h>
+#include <TH1F.h>
+#include <TFile.h>
+#include <TLine.h>
 #include <TF1.h>
 #include <TMath.h>
+#include <TLegend.h>
+#include <TCanvas.h>
 #include <iostream>
+
+using namespace std;
 
 TH1F* hist_Edep =nullptr;
 TH1F* hist_Edep_s =nullptr;
@@ -37,7 +47,7 @@ void energy(){
   TRandom3 gen;
   gen.SetSeed(0);
   TF1 *f = new TF1("f","1/(1+[0]*(1-cos(x)))^2*(1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2)/2",0,TMath::Pi());
-  double theta = f->GetRandom(); 
+  double theta = f->GetRandom();
   double E0 = 1;
   double Ek = 0;
   double Edep = E0 - Ek;
