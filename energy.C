@@ -10,6 +10,7 @@
 #include <TLegend.h>
 #include <TCanvas.h>
 #include <iostream>
+#include <memory>
 
 using namespace std;
 
@@ -43,11 +44,10 @@ double en_dep(TF1* f, double E0){
     return (E0-Ek);
 }
 
-void fill_hist_from_file(TH1* hist_ops_energy)
+void fill_hist_from_file(const char* filename , TH1* hist_ops_energy)
 {
   double energy = 0;
-  TFile *hfile = 0;
-  hfile = TFile::Open("energies.root","READ");
+  std::unique_ptr<TFile> hfile( TFile::Open(filename,"READ") );
   TTree *tree = hfile->Get<TTree>("T");
   tree->SetBranchAddress("Energy",&energy);
 
@@ -75,8 +75,11 @@ void test_energy_function()
   hist_Edep->SetCanExtend(TH1::kAllAxes);
   TH1F* hist_theta = new TH1F("hist_theta","hist_theta",100,0,TMath::Pi());
   hist_theta->SetCanExtend(TH1::kAllAxes);
-  //TF1 *func = new TF1("KN","1/(1+[0]*(1-cos(x)))^2*(1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2)",0,TMath::Pi());
-  //TF1 *func = new TF1("KN","1/(1+[0]*(1-cos(x))) + (1+[0]*(1-cos(x)))-(sin(x))^2",0,TMath::Pi());
+  /// KN = dsigma/dOmega
+  TF1 *func0 = new TF1("KN","1/(1+[0]*(1-cos(x)))^2*(1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2)",0,TMath::Pi());
+  /// KN = dsigma/dTheta -> Jacobian included
+  TF1 *func1 = new TF1("KN","1/(1+[0]*(1-cos(x))) + (1+[0]*(1-cos(x)))-(sin(x))^2",0,TMath::Pi());
+  /// KN = dsigma/dTheta -> Jacobian included, the same as before but using predefined lambda
   TF1 *func = new TF1("KN",KN2,0,TMath::Pi(), 1);
   double E0 =1;
   func->SetParameter(0, E0);
@@ -84,7 +87,6 @@ void test_energy_function()
   std::cout << func->GetXmin() << std::endl;
   std::cout << func->GetMaximum() << std::endl;
   std::cout << func->GetMinimum() << std::endl;
-  //func->Draw();
   double Ek = 0;
   Ek = get_Ek(E0, func->GetXmax()); 
   std::cout <<E0 -Ek  << std::endl;
@@ -102,7 +104,6 @@ void test_energy_function()
     hist_theta->Fill(theta);
   }
   hist_Edep->Draw();
-  //hist_theta->Draw();
 }
 
 void energy() {
@@ -123,7 +124,7 @@ void energy() {
   hist_Edep_color = new TH1F("hist_Edep_color","hist_Edep_color",100,0,1274);
   hist_Edep_color_s = new TH1F("hist_Edep_color_s","hist_Edep_color_s",100,0,1274);
 
-  fill_hist_from_file(hist_ops_energy);
+  fill_hist_from_file("energies.root", hist_ops_energy);
 
   for(int i = 0; i<N; i++){
     Edep = en_dep(f, E0);
