@@ -75,6 +75,7 @@ void eff_E0(){
     eff = hist_Edep->Integral(bin_min, bin_max)/hist_Edep->Integral();
     eff_smear = hist_Edep_smear->Integral(bin_min, bin_max)/hist_Edep_smear->Integral();
     bkg = hist_ops_energy->Integral(bin_min, bin_max)/hist_Edep_smear->Integral();
+    cout<<mu<<", "<<eff_smear<<", "<<bkg<<endl;
     graph_E->SetPoint(i, m[i], E0);
     graph_eff->SetPoint(i, m[i], eff*100);
     graph_eff_smear->SetPoint(i, m[i], eff_smear*100);

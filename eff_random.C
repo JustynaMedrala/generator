@@ -10,6 +10,10 @@ TGraph* graph_t_acc=nullptr;
 TGraph* graph_A_integral=nullptr;
 TGraph* graph_t_shift_integral=nullptr;
 TGraph* graph_t_acc_integral=nullptr;
+TGraph* graph_integral_vs_rand_01MBq=nullptr;
+TGraph* graph_integral_vs_rand_1MBq=nullptr;
+TGraph* graph_integral_vs_rand_10MBq=nullptr;
+TGraph* graph_integral_vs_rand_5MBq=nullptr;
 
 
 void plot(TCanvas *c, TGraph* graph, const char *title, const char *x_label, const char *y_label, const char *name){
@@ -18,30 +22,24 @@ void plot(TCanvas *c, TGraph* graph, const char *title, const char *x_label, con
   graph->GetXaxis()->SetTitle(x_label);
   graph->GetYaxis()->SetTitle(y_label);
   graph->SetMarkerStyle(20);
+  graph->SetMarkerColor(kBlue);
   graph->Draw("AP");
   c->SaveAs(name);
 }
 
-vector<vector<double>> generator(TRandom3 gen, int N, double t_w, double tau){
+vector<vector<double>> generator(TRandom3 gen, double A, double t_w, double tau){
   vector<double> event = {0, 0};
   vector<vector<double>> hits;
   double prompt, hit= 0;
-  //TH1D *hist_hit = new TH1D(" ", " ", 100, 0, 1.1*t_w);
-  //TH1D *hist_prompt = new TH1D(" ", " ", 100, 0, 1.1*t_w);
+  int N = int(A*t_w);
+  
   for(int i = 0; i < N; i++) {
     prompt = gen.Uniform(0, 1)*t_w;
     hit = gen.Exp(tau) + prompt;
     event[0] = prompt; 
     event[1] = hit; 
-    //hist_hit->Fill(hit);
-    //hist_prompt->Fill(prompt);
     hits.push_back(event);
   }
-  /*TCanvas *c = new TCanvas();
-  hist_hit->SetLineColor(kRed);
-  hist_hit->Draw();
-  hist_prompt->Draw("same");
-  c->SaveAs("../plots/prompt_and_hit.png");*/
   return hits;
 }
 
@@ -53,11 +51,14 @@ double num_random(vector<vector<double>> hits, double t_shift, double t_acc, int
   time_start = hits[i][0]+t_shift;
   time_stop = time_start+t_acc;
   for(int k = i; k < N; k++){
-    if(hits[k][1] < time_stop && hits[k][1] > time_start) { N_rand++;}
+    if(hits[k][1] < time_stop && hits[k][1] > time_start) { 
+      N_rand++;
+      break;
+    }
   }
   N_gamma++;
   }
- return double(N_rand)/double(N_gamma);
+  return double(N_rand)/double(N_gamma);
 }
 
 double integral(TRandom3 gen, double tau, int N, double t_shift, double t_acc){
@@ -65,7 +66,7 @@ double integral(TRandom3 gen, double tau, int N, double t_shift, double t_acc){
   double time_stop = t_shift + t_acc;
   double u,t = 0;
   double a = 0;
-  double b = 5*t_shift;
+  double b = 4;
   TH1F *hist_prompt = new TH1F(" ", " ", 100, a, b);
 
   for(int i = 0; i<N; i++){
@@ -76,7 +77,41 @@ double integral(TRandom3 gen, double tau, int N, double t_shift, double t_acc){
   int start = hist_prompt->FindBin(time_start);
   int stop = hist_prompt->FindBin(time_stop);
   double eff = double(hist_prompt->Integral(start, stop))/double(hist_prompt->Integral());
+  /*double w = 900;
+  double h = 700;
+  TCanvas *c = new TCanvas("c", "c", w, h);
+  gPad->SetLeftMargin(0.13);
+  gStyle->SetOptStat(0);
+  hist_prompt->GetYaxis()->SetRangeUser(5000, 17000);
+  hist_prompt->SetLineColor(kViolet);
+  hist_prompt->GetYaxis()->SetTitle("number of events");
+  hist_prompt->GetXaxis()->SetTitle("t [s]");
+  hist_prompt->Draw();
+  auto *l_min = new TLine(1,5000,1,15000);
+  auto *l_max = new TLine(1.2, 5000,1.2, 15000);
+  auto *l_shift = new TArrow(0, 7000, 1, 7000, 0.01, "<>");
+  auto *l_acc = new TArrow(1, 7000, 1.2, 7000, 0.01, "<>");
+  TLatex *text = new TLatex(0.45, 7200, "#scale[0.55]{t_{shift}}"); 
+  TLatex *text1 = new TLatex(1.02, 7200, "#scale[0.55]{t_{acc}}");  
+  l_min->SetLineWidth(2);
+  l_max->SetLineWidth(2);
+  start= hist_prompt->FindBin(1);
+  stop= hist_prompt->FindBin(1.2);
+  TH1F *hist_part = new TH1F(" ", " ", 100, a, b);
+  for(int i = start; i < stop; i++){
+    hist_part->AddBinContent(i, hist_prompt->GetBinContent(i));}
+  hist_part->SetFillColorAlpha(kBlack, 0.3);
+  hist_part->SetLineColor(kBlack);
+  hist_part->Draw("same");
+  l_min->Draw("same");
+  l_max->Draw("same");
+  l_shift->Draw();
+  l_acc->Draw();
+  text->Draw();
+  text1->Draw();
+  c->SaveAs("../plots/ekspon.pdf");*/
   delete hist_prompt;
+  //delete c;
   return eff;
 }
 
@@ -95,6 +130,13 @@ void eff_random()
   double M = 100;
   double tau_prompt = 4;
   int N_int = int(1e6);
+  double num_rand = 0;
+  double ef_integral = 0;
+  double ef_det = 0.102946;
+  double norm_rand = 1-pow((1-ef_det),3);  
+
+  ofstream t_shift_eff;
+  t_shift_eff.open ("t_shift_efficiency.txt");
 
   graph_A = new TGraph(M);
   graph_t_shift = new TGraph(M);
@@ -102,49 +144,112 @@ void eff_random()
   graph_A_integral = new TGraph(M);
   graph_t_shift_integral = new TGraph(M);
   graph_t_acc_integral = new TGraph(M);
-  
+  graph_integral_vs_rand_01MBq = new TGraph(M);
+  graph_integral_vs_rand_1MBq = new TGraph(M);
+  graph_integral_vs_rand_10MBq = new TGraph(M);
+  graph_integral_vs_rand_5MBq = new TGraph(M);
+
   //double i = integral(gen, t_w, N_int, t_shift, t_acc); 
 
-  for(int j = 1; j < M+1; j++){
-    A = j*0.1e6;
+  for(int j = 0; j < M; j++){
+    A = 0.1e6+j*0.1e6;
     N = int(A*t_w);
-    cout<<double(j/M*100)<<", "<<N<<endl;
-    vector<vector<double>> hits = generator(gen, N, t_w, tau);
+    if(int(j*100/M)%20==0) cout<<double(j/M*100)<<", "<<N<<endl;
+    vector<vector<double>> hits = generator(gen, A, t_w, tau);
     sort(hits.begin(), hits.end());
-    //for(int i = 0; i<N; i++) cout<<hits[i][0]*1e7<<", "<<hits[i][1]*1e7<<endl;
-    graph_A->SetPoint(j-1, A/1e6, num_random(hits, t_shift, t_acc, N));
-    graph_A_integral->SetPoint(j-1, A/1e6, integral(gen, tau_prompt, N_int, t_shift*1e2, t_acc*1e2)*100);
+    num_rand = num_random(hits, t_shift, t_acc, N);
+    graph_A->SetPoint(j, A/1e6, norm_rand*num_rand);
+    ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
+    cout<<A<<", "<<ef_integral<<endl;
+    graph_A_integral->SetPoint(j, A/1e6, ef_integral);
   }
   A = 1e6;
   N = int(A*t_w);
   for(int j = 1; j < M+1; j++){
-    t_shift = j*10e-9;
-    cout<<double(j/M*100)<<", "<<N<<endl;
-    vector<vector<double>> hits = generator(gen, N, t_w, tau);
+    t_shift = j*20e-9;
+    if(int(j*100/M)%20==0) cout<<double(j/M*100)<<", "<<N<<endl;
+    vector<vector<double>> hits = generator(gen, A, t_w, tau);
     sort(hits.begin(), hits.end());
-    double num = num_random(hits, t_shift, t_acc, N);
-    graph_t_shift->SetPoint(j-1, t_shift/1e-9, num);
-    graph_t_shift_integral->SetPoint(j-1, t_shift/1e-9, integral(gen, tau_prompt, N_int, t_shift, t_acc)*100);
+    num_rand = num_random(hits, t_shift, t_acc, N);
+    ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
+    graph_t_shift->SetPoint(j-1, t_shift/1e-9, norm_rand*num_rand);
+    graph_t_shift_integral->SetPoint(j-1, t_shift/1e-9, ef_integral);
+    t_shift_eff<<t_shift<<","<<ef_integral<<endl;
   }
   t_shift = 100e-9;
   for(int j = 1; j < M+1; j++){
-    t_acc = j*10e-9;
-    cout<<double(j/M*100)<<", "<<N<<endl;
-    vector<vector<double>> hits = generator(gen, N, t_w, tau);
+    t_acc = j*2e-9;
+    if(int(j*100/M)%20==0) cout<<double(j/M*100)<<", "<<N<<endl;
+    vector<vector<double>> hits = generator(gen, A, t_w, tau);
     sort(hits.begin(), hits.end());
-    graph_t_acc->SetPoint(j-1, t_acc/1e-9, num_random(hits, t_shift, t_acc, N));
-    graph_t_acc_integral->SetPoint(j-1, t_acc/1e-9, integral(gen, tau_prompt, N_int, t_shift, t_acc)*100);  
+    num_rand = num_random(hits, t_shift, t_acc, N);
+    ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
+    graph_t_acc->SetPoint(j-1, t_acc/1e-9, norm_rand*num_rand);
+    graph_t_acc_integral->SetPoint(j-1, t_acc/1e-9, ef_integral);  
+  }
+  
+  t_shift = 200e-9; 
+
+  A = 0.1e6;
+  N = int(A*t_w);
+  for(int j = 1; j < M+1; j++){
+    t_acc = j*2e-9;
+    if(int(j*100/M)%20==0) cout<<double(j/M*100)<<", "<<N<<endl;
+    vector<vector<double>> hits = generator(gen, A, t_w, tau);
+    sort(hits.begin(), hits.end());
+    num_rand = num_random(hits, t_shift, t_acc, N);
+    ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
+    graph_integral_vs_rand_01MBq->SetPoint(j-1, 1-norm_rand*num_rand, ef_integral);
   }
 
+  A = 1e6;
+  N = int(A*t_w);
+  for(int j = 1; j < M+1; j++){
+    t_acc = j*2e-9;
+    if(int(j*100/M)%20==0) cout<<double(j/M*100)<<", "<<N<<endl;
+    vector<vector<double>> hits = generator(gen, A, t_w, tau);
+    sort(hits.begin(), hits.end());
+    num_rand = num_random(hits, t_shift, t_acc, N);
+    ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
+    graph_integral_vs_rand_1MBq->SetPoint(j-1, 1-norm_rand*num_rand, ef_integral);
+  }
 
-  double w = 800;
-  double h = 600;
+  A = 10e6;
+  N = int(A*t_w);
+  for(int j = 1; j < M+1; j++){
+    t_acc = j*2e-9;
+    if(int(j*100/M)%20==0) cout<<double(j/M*100)<<", "<<N<<endl;
+    vector<vector<double>> hits = generator(gen, A, t_w, tau);
+    sort(hits.begin(), hits.end());
+    num_rand = num_random(hits, t_shift, t_acc, N);
+    ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
+    graph_integral_vs_rand_10MBq->SetPoint(j-1, 1-norm_rand*num_rand, ef_integral);
+  }
+
+  A = 5e6;
+  N = int(A*t_w);
+  for(int j = 1; j < M+1; j++){
+    t_acc = j*2e-9;
+    if(int(j*100/M)%20==0) cout<<double(j/M*100)<<", "<<N<<endl;
+    vector<vector<double>> hits = generator(gen, A, t_w, tau);
+    sort(hits.begin(), hits.end());
+    num_rand = num_random(hits, t_shift, t_acc, N);
+    ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
+    graph_integral_vs_rand_5MBq->SetPoint(j-1, 1-num_rand, ef_integral);
+  }
+
+  double w = 900;
+  double h = 700;
   TCanvas *c = new TCanvas("c", "c", w, h);
-  plot(c, graph_A, " ", "A [MBq]", "#frac{N_{rand}}{N_{#gamma}}", "/mnt/home/jmedrala/plots/A_vs_randoms.png");
-  plot(c, graph_t_shift, " ", "t_{shift} [ns]", "#frac{N_{rand}}{N_{#gamma}}", "/mnt/home/jmedrala/plots/t_shift_vs_randoms.png");
-  plot(c, graph_t_acc, " ", "t_{acc} [ns]", "#frac{N_{rand}}{N_{#gamma}}", "/mnt/home/jmedrala/plots/t_acc_vs_randoms.png");
-  plot(c, graph_A_integral, " ", "A [MBq]", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_vs_eff.png");
-  plot(c, graph_t_shift_integral, " ", "t_{shift} [ns]", "Efficiency [%]", "/mnt/home/jmedrala/plots/t_shift_vs_eff.png");
-  plot(c, graph_t_acc_integral, " ", "t_{acc} [ns]", "Efficiency [%]", "/mnt/home/jmedrala/plots/t_acc_vs_eff.png");
+  plot(c, graph_A, " ", "A [MBq]", "N_{rand} / N_{#gamma*}", "/mnt/home/jmedrala/plots/A_vs_randoms.pdf");
+  plot(c, graph_t_shift, " ", "t_{shift} [ns]", "N_{rand} / N_{#gamma*}", "/mnt/home/jmedrala/plots/t_shift_vs_randoms.pdf");
+  plot(c, graph_t_acc, " ", "t_{acc} [ns]", "N_{rand} / N_{#gamma*}", "/mnt/home/jmedrala/plots/t_acc_vs_randoms.pdf");
+  plot(c, graph_integral_vs_rand_01MBq, "A = 0.1 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_01MBq_purity_vs_randoms.pdf");
+  plot(c, graph_integral_vs_rand_1MBq, "A = 1 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_1MBq_purity_vs_randoms.pdf");
+  plot(c, graph_integral_vs_rand_10MBq, "A = 10 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_10MBq_purity_vs_randoms.pdf");
+  plot(c, graph_integral_vs_rand_5MBq, "A = 5 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_5MBq_purity_vs_randoms.pdf");
+  plot(c, graph_A_integral, " ", "A [MBq]", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_vs_eff.pdf");
+  plot(c, graph_t_shift_integral, " ", "t_{shift} [ns]", "Efficiency [%]", "/mnt/home/jmedrala/plots/t_shift_vs_eff.pdf");
+  plot(c, graph_t_acc_integral, " ", "t_{acc} [ns]", "Efficiency [%]", "/mnt/home/jmedrala/plots/t_acc_vs_eff.pdf");
   
 }

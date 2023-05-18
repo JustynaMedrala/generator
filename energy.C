@@ -1,7 +1,17 @@
+#include <TStyle.h>
+#include <TTree.h>
 #include <TRandom3.h>
+#include <TH1F.h>
+#include <TFile.h>
+#include <TLine.h>
 #include <TF1.h>
 #include <TMath.h>
+#include <TLegend.h>
+#include <TCanvas.h>
 #include <iostream>
+#include <memory>
+
+using namespace std;
 
 TH1F* hist_Edep =nullptr;
 TH1F* hist_Edep_s =nullptr;
@@ -33,18 +43,77 @@ double en_dep(TF1* f, double E0){
     return (E0-Ek);
 }
 
-void energy(){
+void fill_hist_from_file(const char* filename , TH1* hist_ops_energy)
+{
+  double energy = 0;
+  std::unique_ptr<TFile> hfile( TFile::Open(filename,"READ") );
+  TTree *tree = hfile->Get<TTree>("T");
+  tree->SetBranchAddress("Energy",&energy);
+
+  int nentries = tree->GetEntries();
+
+  for(int i = 0; i < nentries; i++){
+    tree->GetEntry(i);
+    hist_ops_energy->Fill(energy);
+  }
+}
+
+double helperTerm(double E0, double theta)
+{
+  return  1./(1.+ E0*(1- TMath::Cos(theta)));
+}
+
+double get_Ek(double E0, double theta)
+{
+  return E0/(1+E0*(1-cos(theta)));
+}
+void test_energy_function()
+{
+  auto KN2 = [&](double*x, double* p){ return helperTerm(p[0], x[0]) +1./helperTerm(p[0], x[0]) - TMath::Sin(x[0])*TMath::Sin(x[0]);};
+  TH1F* hist_Edep = new TH1F("hist_Edep","hist_Edep",100,0,1274);
+  hist_Edep->SetCanExtend(TH1::kAllAxes);
+  TH1F* hist_theta = new TH1F("hist_theta","hist_theta",100,0,TMath::Pi());
+  hist_theta->SetCanExtend(TH1::kAllAxes);
+  /// KN = dsigma/dOmega
+  TF1 *func0 = new TF1("KN","1/(1+[0]*(1-cos(x)))^2*(1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2)",0,TMath::Pi());
+  /// KN = dsigma/dTheta -> Jacobian included
+  TF1 *func1 = new TF1("KN","1/(1+[0]*(1-cos(x))) + (1+[0]*(1-cos(x)))-(sin(x))^2",0,TMath::Pi());
+  /// KN = dsigma/dTheta -> Jacobian included, the same as before but using predefined lambda
+  TF1 *func = new TF1("KN",KN2,0,TMath::Pi(), 1);
+  double E0 =1;
+  func->SetParameter(0, E0);
+  std::cout << func->GetXmax() << std::endl;
+  std::cout << func->GetXmin() << std::endl;
+  std::cout << func->GetMaximum() << std::endl;
+  std::cout << func->GetMinimum() << std::endl;
+  double Ek = 0;
+  Ek = get_Ek(E0, func->GetXmax()); 
+  std::cout <<E0 -Ek  << std::endl;
+  Ek = get_Ek(E0, func->GetXmin()); 
+  std::cout << E0-Ek  << std::endl;
+  double theta =0;
+  double Edep =0;
+  int nevents = 100000;
+  for (int i = 0; i < nevents; i++) {
+    theta = func->GetRandom();    
+    Edep = E0 - get_Ek(E0, theta);
+    hist_Edep->Fill(Edep*511);
+    assert(theta>=0);
+    assert(theta<= TMath::Pi());
+    hist_theta->Fill(theta);
+  }
+  hist_Edep->Draw();
+}
+
+void energy() {
   TRandom3 gen;
   gen.SetSeed(0);
   TF1 *f = new TF1("f","1/(1+[0]*(1-cos(x)))^2*(1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2)/2",0,TMath::Pi());
-  double theta = f->GetRandom(); 
   double E0 = 1;
   double Ek = 0;
   double Edep = E0 - Ek;
   int N = int(1e3);
   double sigma = 0;
-  double Energy = 0;
-
   hist_Edep = new TH1F("hist_Edep","hist_Edep",100,0,1274);
   hist_Edep_s = new TH1F("hist_Edep_smear", "hist_Edep_smear", 100, 0, 1274);
   hist_Edep_deex = new TH1F("hist_Edep_deex", "hist_Edep_deex", 100, 0, 1274);
@@ -54,17 +123,7 @@ void energy(){
   hist_Edep_color = new TH1F("hist_Edep_color","hist_Edep_color",100,0,1274);
   hist_Edep_color_s = new TH1F("hist_Edep_color_s","hist_Edep_color_s",100,0,1274);
 
-  TFile *hfile = 0;
-  hfile = TFile::Open("energies.root","READ");
-  TTree *tree = hfile->Get<TTree>("T");
-  tree->SetBranchAddress("Energy",&Energy);
-
-  int nentries = tree->GetEntries();
-
-  for(int i = 0; i < nentries; i++){
-    tree->GetEntry(i);
-    hist_ops_energy->Fill(Energy);
-  }
+  fill_hist_from_file("energies.root", hist_ops_energy);
 
   for(int i = 0; i<N; i++){
     Edep = en_dep(f, E0);
@@ -132,8 +191,9 @@ void energy(){
   legend->AddEntry(hist_Edep_deex_s, "deexcitation energy", "l");
   legend->AddEntry(l_tres, "detector threshold", "l");
   legend->Draw(); 
-
-  c->SaveAs("../plots/hist_Edep_ws.pdf");
+  //std::string outPlotFile = "../plots/hist_Edep_ws.pdf";
+  std::string outPlotFile = "hist_Edep_ws.pdf";
+  c->SaveAs(outPlotFile.c_str());
   ///////////////////////////////////
   hist_Edep_color->SetFillStyle(1001);
   hist_Edep_color->SetFillColorAlpha(kBlack, 0.3);
@@ -153,10 +213,14 @@ void energy(){
   legend1->AddEntry(l_tres, "detector threshold", "l");
   legend1->Draw();
 
-  c->SaveAs("../plots/hist_Edep_wos.pdf");
+  //std::string outPlotFile = "../plots/hist_Edep_wos.pdf";
+  std::string outPlotFile2 = "hist_Edep_wos.pdf";
+  c->SaveAs(outPlotFile2.c_str());
   //////////////////////////////////
   hist_Ek->SetTitle("   ");
   hist_Ek->GetXaxis()->SetTitle("E_{#gamma'}");
   hist_Ek->Draw();
-  c->SaveAs("../plots/hist_Ek.png");
+  //std::string outPlotFile3 = "../plots/hist_Ek.png";
+  std::string outPlotFile3 = "hist_Ek.png";
+  c->SaveAs(outPlotFile3.c_str());
 }

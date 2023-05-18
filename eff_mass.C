@@ -11,11 +11,14 @@ TGraph* graph_eff_smear =nullptr;
 TGraph* graph_diff =nullptr;
 TGraph* graph_E =nullptr;
 TGraph* graph_br =nullptr;
+TGraph* graph_time =nullptr;
 
 void plot(TCanvas *c, int num, bool leg_opt, TGraph* graph1, const char *label1, TGraph* graph2, const char *label2, const char *title, const char *x_label, const char *y_label, const char *name){
   gPad->SetLeftMargin(0.13);
+  gPad->SetBottomMargin(0.13);
   graph1->SetTitle(title);
   graph1->GetXaxis()->SetTitle(x_label);
+  graph1->GetXaxis()->SetTitleOffset(1.3);
   graph1->GetYaxis()->SetTitle(y_label);
   graph1->SetMarkerStyle(20);
   graph1->Draw("AP");
@@ -44,16 +47,17 @@ void eff_mass(){
   int M = int(1e6);
   float m[N];
 
-  for(int i=0; i<N; i++){
+  for(int i=0; i<N-1; i++){
     m[i] = float(i)/float(N-1);
   }
 
-  TCanvas *c = new TCanvas(" ", " ", 900, 800); 
+  TCanvas *c = new TCanvas(" ", " ", 700, 600); 
   graph_eff = new TGraph(N);
   graph_eff_smear = new TGraph(N);
   graph_diff = new TGraph(N);
   graph_E = new TGraph(N);
   graph_br = new TGraph(N);
+  graph_time = new TGraph(N);
 
   for(int i = 0; i < N; i++){
     mu = 2*me*m[i];
@@ -79,7 +83,8 @@ void eff_mass(){
     graph_eff->SetPoint(i, m[i], eff*100);
     graph_eff_smear->SetPoint(i, m[i], eff_smear*100);
     graph_diff->SetPoint(i, m[i], (eff-eff_smear)*100);
-    graph_br->SetPoint(i, m[i], 3.5e-8*(1-m[i]*m[i]));
+    graph_br->SetPoint(i, m[i], 3.5e-8*(1-m[i]*m[i]*m[i]*m[i]));
+    graph_time->SetPoint(i, m[i], 4./(1-m[i]*m[i]*m[i]*m[i]));
     if(i == N-1){
       string tit = "E0 =";
       const char *title = (tit+to_string(E0)).c_str();
@@ -91,15 +96,18 @@ void eff_mass(){
   }
   //Drawing
   ////////////////////////////////////////////////////////////////////////
-  plot(c, 2, 1, graph_eff_smear,"energy with smear", graph_eff, "energy without smear", "Efficiency vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Efficiency [%]", "../plots/Efficiency.png");    
+  plot(c, 2, 1, graph_eff_smear,"energy with smear", graph_eff, "energy without smear", "Efficiency vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Efficiency [%]", "../plots/Efficiency.pdf");    
 
   ////////////////////////////////////////////////////////////////////////
-  plot(c, 1, 0, graph_diff,nullptr, nullptr, nullptr, "Difference in efficiencies vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Difference in efficiencies [%]", "../plots/Difference_efficiency.png");
+  plot(c, 1, 0, graph_diff,nullptr, nullptr, nullptr, "Difference in efficiencies vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Difference in efficiencies [%]", "../plots/Difference_efficiency.pdf");
   
   ////////////////////////////////////////////////////////////////////////
-  plot(c, 1, 0, graph_E,nullptr, nullptr, nullptr, "Energy vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Energy E_{#gamma} [keV]", "../plots/Energy_vs_mu.png");
+  plot(c, 1, 0, graph_E,nullptr, nullptr, nullptr, "Energy vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Energy E_{#gamma} [keV]", "../plots/Energy_vs_mu.pdf");
   
   ////////////////////////////////////////////////////////////////////////////
-  plot(c, 1, 0, graph_br,nullptr, nullptr, nullptr, "Branching ratio vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Branching ratio", "../plots/Branching_ratio_vs_mu.png");  
+  plot(c, 1, 0, graph_br,nullptr, nullptr, nullptr, "Branching ratio vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Branching ratio", "../plots/Branching_ratio_vs_mu.pdf");  
+
+  ////////////////////////////////////////////////////////////////////////////
+  plot(c, 1, 0, graph_time,nullptr, nullptr, nullptr, "Lifetime vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Lifetime [s]", "../plots/Lifetime_vs_mu.pdf");    
 
 }
