@@ -43,19 +43,20 @@ void eff_estim(){
   int M = 36;
   int ind = 0; 
   double A[4] = {0.1, 1, 5, 10}; 
-  double L = 0.64*0.25;
+  double L = 0.36*0.25;
   double T, N_ops, eff;
   int N = 100;
   double T_year = 365*24*60*60;
-  double br, m, eff_tw, eff_tw_2 = 0;
+  double br, m, m_u, eff_det, eff_ortho, eff_para, eff_tw, eff_tw_2 = 0;
   double me = 511;
   double N_o = 200.;
   double BRv = 0;
 
-  m = 2*me*0;
-  br = 3.5e-8*(1-m*m);
+  m_u = 0.5;
+  m = 2*me*m_u;
+  br = 3.5e-8*(1-m_u*m_u*m_u*m_u);
   eff_tw = 0.060164;
-  eff_tw_2 = 0.402847;
+  eff_tw_2 = 0.313368; //0.402847;
   
   TCanvas *c = new TCanvas(" ", " ",  700, 600);
 
@@ -70,29 +71,38 @@ void eff_estim(){
       E = stod(tmp[0]);
       a_temp = stod(tmp[1]);
       eff = (1-exp(-a_temp*2))*(1 - sin(atan(2)/2.)*sin(atan(2)/2.)*2.);
-      if(E > 0.4 && E > 0.6){a = a_temp;}
+      if(E == 0.5){a = a_temp;}
       hist_e_mu->SetPoint(ind, E, (1-exp(-a_temp*2))*100);    
       hist_e_eff->SetPoint(ind, E, eff*100);
       ind++;                                          
     }
   }
   eff = (1-exp(-a*2))*(1 - sin(atan(2)/2.)*sin(atan(2)/2.)*2.);
-  eff = eff*eff_tw*eff_tw_2;
+  eff_det = 0.102903; 
+  //eff_ortho = eff_det*(1-eff_det);
+  //eff_para = 1; //eff_det*pow((1-eff_det), 2);
+  eff = eff_tw*eff*eff_tw_2;
 
-
+  cout<<"Eff detekcji: "<<1-exp(-a*2)<<", "<<a<<endl;
   for(int j = 0; j < 4; j++){
-    L = 0.64*0.25*A[j]*1e6;
+    L = 0.36*0.25*A[j]*1e6;
     hist_N_L = new TGraph(N); 
     hist_BR = new TGraph(N);
     hist_sigma = new TGraph(N); 
     for(int i = 0; i < N; i++){
       T = 0.1*(i+1)*T_year;
       N_ops = L*eff*T*br;
-      BRv = N_o/(L*eff*T);
+      if(T==3*T_year) N_o = N_ops;
       hist_N_L->SetPoint(i, T/T_year, N_ops);
-      hist_BR->SetPoint(i, T/T_year, BRv);
       hist_sigma->SetPoint(i, T/T_year, sqrt(N_ops)*1.959964);
       }
+    cout<<N_o<<endl;
+    for(int i = 0; i < N; i++){
+      T = 0.1*(i+1)*T_year;
+      BRv = N_o/(L*eff*T);
+      hist_BR->SetPoint(i, T/T_year, BRv);
+      }
+    gPad->SetLogy(0);
     string file_name = "../plots/N_ops_"+to_string(int(A[j]))+".pdf";
     string title = "A = "+to_string(A[j]).substr(0,4)+" [MBq]";
     plot(c, hist_N_L, &title[0], "T [year]", "N_{o-Ps}", &file_name[0]);

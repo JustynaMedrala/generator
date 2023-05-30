@@ -26,10 +26,12 @@ vector<string> split(const string &str, char sep){
 
 void to_root()
 {
-  double Energy;
+  double Energy, E_0;
   TRandom3 gen;
   gen.SetSeed(0);
-  TF1 *f = new TF1("f","1/(1+[0]*(1-cos(x)))^2*(1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2)/2",0,TMath::Pi());
+  TF1 *f = new TF1("f","1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2",0,TMath::Pi());
+
+  //double E0;
 
   ifstream inFile;
   inFile.open("energies.txt");
@@ -39,7 +41,7 @@ void to_root()
   hfile = TFile::Open("energies.root","RECREATE");
   TTree *tree = new TTree("T","T");
   tree->Branch("Energy",&Energy,"Energy/D");
-  tree->Branch("E0", &E0, "E0/D");
+  tree->Branch("E_0", &E_0, "E_0/D");
 
   double E0, Ek, Edep, theta;
   int ind = 0;
@@ -59,9 +61,10 @@ void to_root()
          theta = f->GetRandom(); 
          Ek = E0/(1+E0*(1-cos(theta)));
          Edep = E0-Ek;
-         //cout<<E0<<", "<<Edep<<endl;
+         cout<<E0<<", "<<Edep<<", "<<theta<<endl;
          hist_energy->Fill(Edep);
          Energy = Edep;
+         E_0 = E0;
          tree->Fill();
        }  
     }

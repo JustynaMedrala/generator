@@ -108,7 +108,7 @@ void test_energy_function()
 void energy() {
   TRandom3 gen;
   gen.SetSeed(0);
-  TF1 *f = new TF1("f","1/(1+[0]*(1-cos(x)))^2*(1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2)/2",0,TMath::Pi());
+  TF1 *f = new TF1("f","1/(1+[0]*(1-cos(x))) + (1+[0]*(1-cos(x)))-(sin(x))^2",0,TMath::Pi());
   double E0 = 1;
   double Ek = 0;
   double Edep = E0 - Ek;
@@ -159,16 +159,20 @@ void energy() {
   /////////////////////////////////
   TCanvas *c = new TCanvas(" ", " ", 900, 800);
   gStyle->SetOptStat(0);
+
   ////////////////////////////////////
   f->SetTitle("  ");
   f->GetXaxis()->SetTitle("#theta");
   f->GetYaxis()->SetTitle("f(#theta)");
   f->Draw();
-  c->SaveAs("../plots/f(theta).png");
+  c->SaveAs("../plots/f(theta).pdf");
   ///////////////////////////////////
-  auto *l_tres = new TLine(50,0,50,0.06);
-  auto *l_min = new TLine(0.3*511, 0, 0.3*511, 0.06);
-  auto *l_max = new TLine(0.8*511, 0, 0.8*511, 0.06);
+  auto *l_tres = new TLine(50,0,50,0.12);
+  auto *l_min = new TLine(0.3*511, 0, 0.3*511, 0.12);
+  auto *l_max = new TLine(0.8*511, 0, 0.8*511, 0.12);
+  l_tres->SetLineWidth(2);
+  l_min->SetLineWidth(2);
+  l_max->SetLineWidth(2);
   ///////////////////////////////////
   hist_Edep_color_s->SetFillStyle(1001);
   hist_ops_energy->SetTitle("   ");
@@ -179,6 +183,7 @@ void energy() {
   l_tres->SetLineColor(kRed);
   hist_ops_energy->Draw("hist");
   hist_Edep_s->Draw("same hist");
+  //hist_ops_energy->Draw("same hist");
   hist_Edep_deex_s->Draw("same hist");
   hist_Edep_color_s->Draw("same hist");
   l_tres->Draw("same");
@@ -223,4 +228,19 @@ void energy() {
   //std::string outPlotFile3 = "../plots/hist_Ek.png";
   std::string outPlotFile3 = "hist_Ek.png";
   c->SaveAs(outPlotFile3.c_str());
+  
+  hist_Edep_s->SetTitle(" ");
+  hist_Edep_s->SetFillColor(kRed);
+  hist_Edep_s->SetLineColor(kRed);
+  hist_Edep_s->Draw("hist");
+  c->SaveAs("E_dep_s.pdf");
+
+  hist_Edep->GetXaxis()->SetTitle("E_{dep} [keV]");
+  hist_Edep->SetTitle(" ");
+  hist_Edep->SetFillColor(kBlue);
+  hist_Edep->SetLineColor(kBlue);
+  hist_Edep->Draw("hist");
+  c->SaveAs("E_dep.pdf");
+
+
 }

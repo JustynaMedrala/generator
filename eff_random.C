@@ -66,7 +66,7 @@ double integral(TRandom3 gen, double tau, int N, double t_shift, double t_acc){
   double time_stop = t_shift + t_acc;
   double u,t = 0;
   double a = 0;
-  double b = 4;
+  double b = 1e-6;
   TH1F *hist_prompt = new TH1F(" ", " ", 100, a, b);
 
   for(int i = 0; i<N; i++){
@@ -133,7 +133,8 @@ void eff_random()
   double num_rand = 0;
   double ef_integral = 0;
   double ef_det = 0.102946;
-  double norm_rand = 1-pow((1-ef_det),3);  
+  double norm_rand = ef_det*pow((1-ef_det),2);  
+  double ef_para = ef_det*(1-ef_det);
 
   ofstream t_shift_eff;
   t_shift_eff.open ("t_shift_efficiency.txt");
@@ -160,7 +161,7 @@ void eff_random()
     num_rand = num_random(hits, t_shift, t_acc, N);
     graph_A->SetPoint(j, A/1e6, norm_rand*num_rand);
     ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
-    cout<<A<<", "<<ef_integral<<endl;
+    //cout<<A<<", "<<ef_integral<<endl;
     graph_A_integral->SetPoint(j, A/1e6, ef_integral);
   }
   A = 1e6;
@@ -172,7 +173,7 @@ void eff_random()
     sort(hits.begin(), hits.end());
     num_rand = num_random(hits, t_shift, t_acc, N);
     ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
-    graph_t_shift->SetPoint(j-1, t_shift/1e-9, norm_rand*num_rand);
+    graph_t_shift->SetPoint(j-1, t_shift/1e-9, ef_para*norm_rand*num_rand);
     graph_t_shift_integral->SetPoint(j-1, t_shift/1e-9, ef_integral);
     t_shift_eff<<t_shift<<","<<ef_integral<<endl;
   }
@@ -184,11 +185,11 @@ void eff_random()
     sort(hits.begin(), hits.end());
     num_rand = num_random(hits, t_shift, t_acc, N);
     ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
-    graph_t_acc->SetPoint(j-1, t_acc/1e-9, norm_rand*num_rand);
+    graph_t_acc->SetPoint(j-1, t_acc/1e-9, ef_para*norm_rand*num_rand);
     graph_t_acc_integral->SetPoint(j-1, t_acc/1e-9, ef_integral);  
   }
   
-  t_shift = 200e-9; 
+  /*t_shift = 200e-9; 
 
   A = 0.1e6;
   N = int(A*t_w);
@@ -199,7 +200,7 @@ void eff_random()
     sort(hits.begin(), hits.end());
     num_rand = num_random(hits, t_shift, t_acc, N);
     ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
-    graph_integral_vs_rand_01MBq->SetPoint(j-1, 1-norm_rand*num_rand, ef_integral);
+    graph_integral_vs_rand_01MBq->SetPoint(j-1, 1-norm_rand*num_rand*ef_para, ef_integral);
   }
 
   A = 1e6;
@@ -211,7 +212,7 @@ void eff_random()
     sort(hits.begin(), hits.end());
     num_rand = num_random(hits, t_shift, t_acc, N);
     ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
-    graph_integral_vs_rand_1MBq->SetPoint(j-1, 1-norm_rand*num_rand, ef_integral);
+    graph_integral_vs_rand_1MBq->SetPoint(j-1, 1-norm_rand*num_rand*ef_para, ef_integral);
   }
 
   A = 10e6;
@@ -223,7 +224,7 @@ void eff_random()
     sort(hits.begin(), hits.end());
     num_rand = num_random(hits, t_shift, t_acc, N);
     ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
-    graph_integral_vs_rand_10MBq->SetPoint(j-1, 1-norm_rand*num_rand, ef_integral);
+    graph_integral_vs_rand_10MBq->SetPoint(j-1, 1-norm_rand*num_rand*ef_para, ef_integral);
   }
 
   A = 5e6;
@@ -235,8 +236,8 @@ void eff_random()
     sort(hits.begin(), hits.end());
     num_rand = num_random(hits, t_shift, t_acc, N);
     ef_integral = integral(gen, tau_prompt, N_int, t_shift, t_acc)*100;
-    graph_integral_vs_rand_5MBq->SetPoint(j-1, 1-num_rand, ef_integral);
-  }
+    graph_integral_vs_rand_5MBq->SetPoint(j-1, 1-num_rand*ef_para, ef_integral);
+  }*/
 
   double w = 900;
   double h = 700;
@@ -244,10 +245,10 @@ void eff_random()
   plot(c, graph_A, " ", "A [MBq]", "N_{rand} / N_{#gamma*}", "/mnt/home/jmedrala/plots/A_vs_randoms.pdf");
   plot(c, graph_t_shift, " ", "t_{shift} [ns]", "N_{rand} / N_{#gamma*}", "/mnt/home/jmedrala/plots/t_shift_vs_randoms.pdf");
   plot(c, graph_t_acc, " ", "t_{acc} [ns]", "N_{rand} / N_{#gamma*}", "/mnt/home/jmedrala/plots/t_acc_vs_randoms.pdf");
-  plot(c, graph_integral_vs_rand_01MBq, "A = 0.1 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_01MBq_purity_vs_randoms.pdf");
-  plot(c, graph_integral_vs_rand_1MBq, "A = 1 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_1MBq_purity_vs_randoms.pdf");
-  plot(c, graph_integral_vs_rand_10MBq, "A = 10 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_10MBq_purity_vs_randoms.pdf");
-  plot(c, graph_integral_vs_rand_5MBq, "A = 5 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_5MBq_purity_vs_randoms.pdf");
+  //plot(c, graph_integral_vs_rand_01MBq, "A = 0.1 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_01MBq_purity_vs_randoms.pdf");
+  //plot(c, graph_integral_vs_rand_1MBq, "A = 1 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_1MBq_purity_vs_randoms.pdf");
+  //plot(c, graph_integral_vs_rand_10MBq, "A = 10 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_10MBq_purity_vs_randoms.pdf");
+  //plot(c, graph_integral_vs_rand_5MBq, "A = 5 [MBq]", "Purity", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_5MBq_purity_vs_randoms.pdf");
   plot(c, graph_A_integral, " ", "A [MBq]", "Efficiency [%]", "/mnt/home/jmedrala/plots/A_vs_eff.pdf");
   plot(c, graph_t_shift_integral, " ", "t_{shift} [ns]", "Efficiency [%]", "/mnt/home/jmedrala/plots/t_shift_vs_eff.pdf");
   plot(c, graph_t_acc_integral, " ", "t_{acc} [ns]", "Efficiency [%]", "/mnt/home/jmedrala/plots/t_acc_vs_eff.pdf");

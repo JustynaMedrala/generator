@@ -38,7 +38,7 @@ void plot(TCanvas *c, int num, bool leg_opt, TGraph* graph1, const char *label1,
 void eff_mass(){
   TRandom3 gen;
   gen.SetSeed(0);
-  TF1 *f = new TF1("f","1/(1+[0]*(1-cos(x)))^2*(1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2)/2",0,TMath::Pi());
+  TF1 *f = new TF1("f","(1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2)",0,TMath::Pi());
   double E0, theta, Ek, Edep, eff, eff_smear, sigma, mu = 0;
   double me = 511;
   int bin_min = 30;
@@ -96,7 +96,7 @@ void eff_mass(){
   }
   //Drawing
   ////////////////////////////////////////////////////////////////////////
-  plot(c, 2, 1, graph_eff_smear,"energy with smear", graph_eff, "energy without smear", "Efficiency vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Efficiency [%]", "../plots/Efficiency.pdf");    
+  plot(c, 2, 1, graph_eff_smear,"energy with smear", graph_eff, "energy without smear", "  ", "#frac{m_{U}}{2m_{e}}", "Efficiency [%]", "../plots/Efficiency.pdf");    
 
   ////////////////////////////////////////////////////////////////////////
   plot(c, 1, 0, graph_diff,nullptr, nullptr, nullptr, "Difference in efficiencies vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Difference in efficiencies [%]", "../plots/Difference_efficiency.pdf");
