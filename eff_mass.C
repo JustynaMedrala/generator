@@ -3,6 +3,7 @@
 #include <TMath.h>
 #include <string>
 #include <iostream>
+#include <fstream>
 
 TH1F* hist_Edep =nullptr;
 TH1F* hist_Edep_smear =nullptr;
@@ -47,6 +48,11 @@ void eff_mass(){
   int M = int(1e6);
   float m[N];
 
+  ofstream branching_ratio, E_gamma, efficiency;
+  branching_ratio.open ("../plots/branching_ratio.txt");
+  E_gamma.open("../plots/E_gamma.txt");
+  efficiency.open("../plots/efficiency_vs_mU.txt");
+
   for(int i=0; i<N-1; i++){
     m[i] = float(i)/float(N-1);
   }
@@ -62,7 +68,7 @@ void eff_mass(){
   for(int i = 0; i < N; i++){
     mu = 2*me*m[i];
     E0 = me*(1-mu*mu/me/me/4.);//sqrt(mu*(4*me-mu))-mu;
-    f->SetParameter(0, E0);
+    f->SetParameter(0, E0/511.);
     hist_Edep = new TH1F("hist_Edep","hist_Edep",100,0,1);
     hist_Edep_smear = new TH1F("hist_Edep_with_smear", "hist_Edep_with_smear",100,0,1);
     for(int j = 0; j < M; j++){
@@ -78,14 +84,16 @@ void eff_mass(){
     }
     eff = hist_Edep->Integral(bin_min, bin_max)/hist_Edep->Integral();
     eff_smear = hist_Edep_smear->Integral(bin_min, bin_max)/hist_Edep_smear->Integral();
-    //cout<<eff_smear-eff<<endl;
+    branching_ratio<<m[i]<<", "<<3.5e-8*(1-m[i]*m[i]*m[i]*m[i])<<endl;
+    E_gamma<<m[i]<<", "<<E0<<endl;
+    efficiency<<m[i]<<", "<<eff_smear<<endl;
     graph_E->SetPoint(i, m[i], E0);
     graph_eff->SetPoint(i, m[i], eff*100);
     graph_eff_smear->SetPoint(i, m[i], eff_smear*100);
     graph_diff->SetPoint(i, m[i], (eff-eff_smear)*100);
     graph_br->SetPoint(i, m[i], 3.5e-8*(1-m[i]*m[i]*m[i]*m[i]));
     graph_time->SetPoint(i, m[i], 4./(1-m[i]*m[i]*m[i]*m[i]));
-    if(i == N-1){
+    if(i == 0){
       string tit = "E0 =";
       const char *title = (tit+to_string(E0)).c_str();
       hist_Edep_smear->SetTitle(title);
@@ -94,6 +102,10 @@ void eff_mass(){
     hist_Edep->Delete();
     hist_Edep_smear->Delete();
   }
+
+  branching_ratio.close();
+  E_gamma.close();
+  efficiency.close();
   //Drawing
   ////////////////////////////////////////////////////////////////////////
   plot(c, 2, 1, graph_eff_smear,"energy with smear", graph_eff, "energy without smear", "  ", "#frac{m_{U}}{2m_{e}}", "Efficiency [%]", "../plots/Efficiency.pdf");    

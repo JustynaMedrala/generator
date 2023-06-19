@@ -48,7 +48,7 @@ void fill_hist_from_file(const char* filename , TH1* hist_ops_energy)
   double energy = 0;
   std::unique_ptr<TFile> hfile( TFile::Open(filename,"READ") );
   TTree *tree = hfile->Get<TTree>("T");
-  tree->SetBranchAddress("Energy",&energy);
+  tree->SetBranchAddress("Energy_att",&energy);
 
   int nentries = tree->GetEntries();
 
@@ -57,6 +57,7 @@ void fill_hist_from_file(const char* filename , TH1* hist_ops_energy)
     hist_ops_energy->Fill(energy);
   }
 }
+
 
 double helperTerm(double E0, double theta)
 {
@@ -123,7 +124,8 @@ void energy() {
   hist_Edep_color = new TH1F("hist_Edep_color","hist_Edep_color",100,0,1274);
   hist_Edep_color_s = new TH1F("hist_Edep_color_s","hist_Edep_color_s",100,0,1274);
 
-  fill_hist_from_file("energies.root", hist_ops_energy);
+  fill_hist_from_file("energies.root","Energy", hist_ops_energy);
+  cout<<"bkg: "<< hist_ops_energy->Integral(0.3*511, 0.8*511)/hist_ops_energy->Integral()<<endl; 
 
   for(int i = 0; i<N; i++){
     Edep = en_dep(f, E0);
@@ -167,9 +169,9 @@ void energy() {
   f->Draw();
   c->SaveAs("../plots/f(theta).pdf");
   ///////////////////////////////////
-  auto *l_tres = new TLine(50,0,50,0.12);
-  auto *l_min = new TLine(0.3*511, 0, 0.3*511, 0.12);
-  auto *l_max = new TLine(0.8*511, 0, 0.8*511, 0.12);
+  auto *l_tres = new TLine(50,0,50,0.25);
+  auto *l_min = new TLine(0.3*511, 0, 0.3*511, 0.25);
+  auto *l_max = new TLine(0.8*511, 0, 0.8*511, 0.25);
   l_tres->SetLineWidth(2);
   l_min->SetLineWidth(2);
   l_max->SetLineWidth(2);
@@ -177,6 +179,7 @@ void energy() {
   hist_Edep_color_s->SetFillStyle(1001);
   hist_ops_energy->SetTitle("   ");
   hist_ops_energy->GetXaxis()->SetTitle("E_{dep} [keV]");
+  hist_ops_energy->GetYaxis()->SetRangeUser(0, 0.14);
   hist_ops_energy->SetLineColor(kGreen);
   hist_Edep_color_s->SetFillColorAlpha(kBlack, 0.3);
   hist_Edep_deex_s->SetLineColor(kViolet);
@@ -203,6 +206,7 @@ void energy() {
   hist_Edep_color->SetFillStyle(1001);
   hist_Edep_color->SetFillColorAlpha(kBlack, 0.3);
   hist_Edep_deex->SetLineColor(kViolet);
+  hist_ops_energy->GetYaxis()->SetRangeUser(0, 0.3);
   hist_ops_energy->Draw("hist");
   hist_Edep->Draw("same hist");
   hist_Edep_deex->Draw("same hist");
@@ -242,5 +246,6 @@ void energy() {
   hist_Edep->Draw("hist");
   c->SaveAs("E_dep.pdf");
 
-
+  hist_ops_energy->Draw("hist");
+  c->SaveAs("../plots/E_ops.pdf");
 }
