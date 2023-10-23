@@ -1,3 +1,11 @@
+/* Purpose:
+   1. generation of plots:
+	-
+        - energy of monochromatic photon vs U boson mass
+	- lifetime vs U boson mass
+	- branching ratio vs U boson mass
+ *
+*/
 #include <TRandom3.h>
 #include <TF1.h>
 #include <TMath.h>
@@ -36,7 +44,7 @@ void plot(TCanvas *c, int num, bool leg_opt, TGraph* graph1, const char *label1,
   c->SaveAs(name);
 }
 
-void eff_mass(){
+void Umass_life(){
   TRandom3 gen;
   gen.SetSeed(0);
   TF1 *f = new TF1("f","(1+[0]*(1-cos(x))+1/(1+[0]*(1-cos(x)))-(sin(x))^2)",0,TMath::Pi());
@@ -47,11 +55,14 @@ void eff_mass(){
   int N = 21;
   int M = int(1e6);
   float m[N];
+  string plot_path, plot_name, data_path;
+  plot_path = "../../plots/";
+  data_path = "../data/";
 
   ofstream branching_ratio, E_gamma, efficiency;
-  branching_ratio.open ("../plots/branching_ratio.txt");
-  E_gamma.open("../plots/E_gamma.txt");
-  efficiency.open("../plots/efficiency_vs_mU.txt");
+  branching_ratio.open (data_path+"branching_ratio.txt");
+  E_gamma.open(data_path+"E_gamma.txt");
+  efficiency.open(data_path+"efficiency_vs_mU.txt");
 
   for(int i=0; i<N-1; i++){
     m[i] = float(i)/float(N-1);
@@ -67,7 +78,7 @@ void eff_mass(){
 
   for(int i = 0; i < N; i++){
     mu = 2*me*m[i];
-    E0 = me*(1-mu*mu/me/me/4.);//sqrt(mu*(4*me-mu))-mu;
+    E0 = me*(1-mu*mu/me/me/4.);
     f->SetParameter(0, E0/511.);
     hist_Edep = new TH1F("hist_Edep","hist_Edep",100,0,1);
     hist_Edep_smear = new TH1F("hist_Edep_with_smear", "hist_Edep_with_smear",100,0,1);
@@ -75,9 +86,9 @@ void eff_mass(){
       theta = f->GetRandom();
       Ek = E0/(1+E0/me*(1-cos(theta)));
       Edep = (E0 - Ek)/511.;
-      hist_Edep->Fill(Edep);     
+      hist_Edep->Fill(Edep);
  
-      sigma = sqrt(Edep)*0.044*0.511;
+      sigma = 0.044*sqrt(Edep*0.511);//sigma = 0.044*sqrt(Edep [MeV])
       Edep = gen.Gaus(Edep*0.511, sigma)/0.511;
 
       hist_Edep_smear->Fill(Edep);
@@ -98,7 +109,8 @@ void eff_mass(){
       const char *title = (tit+to_string(E0)).c_str();
       hist_Edep_smear->SetTitle(title);
       hist_Edep_smear->Draw();
-      c->SaveAs("../plots/hist_Edep_max_m.png");}
+      plot_name = plot_path+"hist_Edep_max_m.png";
+      c->SaveAs(&plot_name[0]);}
     hist_Edep->Delete();
     hist_Edep_smear->Delete();
   }
@@ -108,18 +120,23 @@ void eff_mass(){
   efficiency.close();
   //Drawing
   ////////////////////////////////////////////////////////////////////////
-  plot(c, 2, 1, graph_eff_smear,"energy with smear", graph_eff, "energy without smear", "  ", "#frac{m_{U}}{2m_{e}}", "Efficiency [%]", "../plots/Efficiency.pdf");    
+  plot_name = plot_path+"Efficiency.pdf";
+  plot(c, 2, 1, graph_eff_smear,"energy with smear", graph_eff, "energy without smear", "  ", "#frac{m_{U}}{2m_{e}}", "Efficiency [%]", &plot_name[0]);    
 
   ////////////////////////////////////////////////////////////////////////
-  plot(c, 1, 0, graph_diff,nullptr, nullptr, nullptr, "Difference in efficiencies vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Difference in efficiencies [%]", "../plots/Difference_efficiency.pdf");
+  plot_name = plot_path+"Difference_efficiency.pdf";
+  plot(c, 1, 0, graph_diff,nullptr, nullptr, nullptr, "Difference in efficiencies vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Difference in efficiencies [%]", &plot_name[0]);
   
   ////////////////////////////////////////////////////////////////////////
-  plot(c, 1, 0, graph_E,nullptr, nullptr, nullptr, "Energy vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Energy E_{#gamma} [keV]", "../plots/Energy_vs_mu.pdf");
+  plot_name = plot_path+"Energy_vs_mu.pdf";
+  plot(c, 1, 0, graph_E,nullptr, nullptr, nullptr, "Energy vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Energy E_{#gamma} [keV]", &plot_name[0]);
   
   ////////////////////////////////////////////////////////////////////////////
-  plot(c, 1, 0, graph_br,nullptr, nullptr, nullptr, "Branching ratio vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Branching ratio", "../plots/Branching_ratio_vs_mu.pdf");  
+  plot_name = plot_path+"Branching_ratio_vs_mu.pdf";
+  plot(c, 1, 0, graph_br,nullptr, nullptr, nullptr, "Branching ratio vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Branching ratio", &plot_name[0]);  
 
   ////////////////////////////////////////////////////////////////////////////
-  plot(c, 1, 0, graph_time,nullptr, nullptr, nullptr, "Lifetime vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Lifetime [s]", "../plots/Lifetime_vs_mu.pdf");    
+  plot_name = plot_path+"Lifetime_vs_mu.pdf";
+  plot(c, 1, 0, graph_time,nullptr, nullptr, nullptr, "Lifetime vs m_{U}", "#frac{m_{U}}{2m_{e}}", "Lifetime [s]", &plot_name[0]);    
 
 }

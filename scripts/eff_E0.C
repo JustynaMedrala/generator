@@ -79,6 +79,51 @@ void purity(TH1* hist_Edep, TH1* hist_Edep_smear, int N_bin, int bin_min, int bi
       }                            
 }
 
+
+void plot(TCanvas *c, TGraph* graph, const char *title, const char *x_label, const char *y_label, const char *name){
+  gPad->SetLeftMargin(0.13);
+  gPad->SetBottomMargin(0.13);
+  graph->SetTitle(title);
+  graph->GetXaxis()->SetTitle(x_label);
+  graph->GetYaxis()->SetTitle(y_label);
+  graph->GetXaxis()->SetTitleOffset(1.2);
+  graph->GetYaxis()->SetTitleOffset(1.3);
+  graph->GetXaxis()->SetTitleSize(0.045);
+  graph->GetYaxis()->SetTitleSize(0.045); 
+  graph->SetMarkerStyle(20);
+  graph->SetMarkerColor(kBlue);
+  graph->Draw("AP");
+  c->SaveAs(name);
+}
+
+
+void plot3(TCanvas *c, TGraph* graph, const char *lname_1, TGraph* graph2, const char *lname_2, TGraph* graph3, const char *lname_3, const char *title, const char *x_label, const char *y_label, const char *name){
+  gPad->SetLeftMargin(0.13);
+  graph->SetTitle(title);
+  graph->GetXaxis()->SetTitle(x_label);
+  graph->GetYaxis()->SetTitle(y_label);
+  graph->GetYaxis()->SetRangeUser(0, 101);
+  graph->GetXaxis()->SetTitleOffset(1.2);
+  graph->SetMarkerStyle(20);
+  graph->SetMarkerColor(kBlue);
+  graph2->SetMarkerColor(kRed);
+  graph2->SetMarkerStyle(20);
+  graph3->SetMarkerStyle(20);
+  graph->Draw("AP");
+  graph2->Draw("same P");
+  graph3->Draw("same P");
+  
+
+  auto legend = new TLegend(0.65,0.67,0.98,0.98);
+  legend->AddEntry(graph,lname_1,"p");
+  legend->AddEntry(graph2,lname_2,"p");
+  legend->AddEntry(graph3,lname_3, "p");
+  legend->SetTextSize(0.04);
+  legend->Draw();
+
+  c->SaveAs(name);
+}
+
 void eff_E0(){
   double E0, theta, Ek, Edep, eff, eff_smear, sigma, Energy, bkg = 0;
   int num_bins = 511;
@@ -91,14 +136,20 @@ void eff_E0(){
   double mu = 0;
   float e_min = 0;
   int N_bin = int(bin_max-bin_min+1)/5.11;
- 
+  int ind = 10; //0 - mu = 0 keV, 5 - mu = 255.5 keV, 10 - mu = 511 keV, 14 - mu = 715.4 keV
+  string plot_path, plot_name, data_path, filename, plot_title;
+  plot_path = "../../plots/";
+  data_path = "../data/";
+
+
   for(int i=0; i<N; i++){
     m[i] = float(i)/float(N-1);
   }
 
 
   TFile *hfile = 0;
-  hfile = TFile::Open("energies.root","READ");
+  filename = data_path+"energies.root";
+  hfile = TFile::Open(&filename[0],"READ");
   TTree *tree = hfile->Get<TTree>("T");
   tree->SetBranchAddress("Energy",&Energy);
 
@@ -120,7 +171,9 @@ void eff_E0(){
   //fill_hist_from_file("energies.root", "E_0", hist_E0);
 
   hist_ops_energy->Draw();
-  c1->SaveAs("hist_ops.png");
+  plot_name = plot_path+"hist_ops.png";
+  c1->SaveAs(&plot_name[0]);
+
   for(int i = 0; i < N; i++){
     mu = 2*me*m[i];
     E0 = me*(1-mu*mu/me/me/4.);//sqrt(mu*(4*me-mu))-mu;
@@ -129,106 +182,43 @@ void eff_E0(){
     hist_Edep = new TH1F("hist_Edep","hist_Edep",num_bins,0,511);
     hist_Edep_smear = new TH1F("hist_Edep_with_smear", "hist_Edep_with_smear",num_bins,0,511);
     E_dep(M, E0, hist_Edep, hist_Edep_smear);
-    if(i == 14) purity(hist_Edep, hist_Edep_smear, N_bin, bin_min, bin_max, graph_pur_vs_min, graph_eff_vs_min, graph_bkg_vs_min);
+    if(i == ind) purity(hist_Edep, hist_Edep_smear, N_bin, bin_min, bin_max, graph_pur_vs_min, graph_eff_vs_min, graph_bkg_vs_min);
    
     bkg = efficiency(bin_min, bin_max, hist_ops_energy);
     eff = efficiency(bin_min, bin_max, hist_Edep);
     eff_smear = efficiency(bin_min, bin_max, hist_Edep_smear);
-    cout<<E0*511.<<", "<<mu<<", "<<eff_smear<<", "<<bkg<<endl;
+    cout<<i<<", "<<E0*511.<<", "<<mu<<", "<<eff_smear<<", "<<bkg<<endl;
     graph_E->SetPoint(i, m[i], E0);
     graph_eff->SetPoint(i, m[i], eff*100);
     graph_eff_smear->SetPoint(i, m[i], eff_smear*100);
     graph_diff->SetPoint(i, m[i], (eff-eff_smear)*100);
     graph_bkg->SetPoint(i, m[i], bkg*100);
     graph_pur->SetPoint(i, m[i], eff_smear/(eff_smear+bkg));
-    //hist_Edep_smear->Draw();
-    //c1->SaveAs("hist_dep.pdf");
+    
     hist_Edep->Delete();
     hist_Edep_smear->Delete();
   }
   //Drawing
   ////////////////////////////////////////////////////////////////////////
-  graph_eff->SetTitle(" ");
-  graph_eff->GetXaxis()->SetTitle("#frac{m_{U}}{m_{e}}");
-  graph_eff->GetYaxis()->SetTitle("Efficiency [%]");
-  graph_eff->SetMarkerStyle(20);
-  graph_eff->SetMarkerSize(1.);
-  graph_eff_smear->SetMarkerStyle(20);
-  graph_eff_smear->SetMarkerColor(kRed);
-  graph_bkg->SetMarkerStyle(20);
-  graph_bkg->SetMarkerColor(kGreen);
-  graph_eff->Draw("AP");
-  graph_eff_smear->Draw("same P");
-  graph_bkg->Draw("same P");
-
-  auto legend = new TLegend(0.65,0.2,0.9,0.4);
-  legend->AddEntry(graph_eff,"energy without smear","p");
-  legend->AddEntry(graph_eff_smear,"energy with smear","p");
-  legend->AddEntry(graph_bkg, "background (o-Ps)", "p");
-  legend->Draw();
-
-  
-  c1->SaveAs("../plots/Efficiency.pdf");
+  plot_name = plot_path + "Efficiency.pdf";
+  plot3(c1, graph_eff, "energy without smear", graph_eff_smear, "energy with smear", graph_bkg, "background (o-Ps)", " ", "#frac{m_{U}}{m_{e}}", "Efficiency [%]", &plot_name[0]);
 
   ////////////////////////////////////////////////////////////////////////
-  graph_diff->SetTitle("Difference in efficiencies vs m_{u}");
-  graph_diff->GetXaxis()->SetTitle("#frac{m_{U}}{m_{e}}");
-  graph_diff->GetYaxis()->SetTitle("Difference in efficiencies [%]");
-  graph_diff->SetMarkerStyle(20);
-  graph_diff->SetMarkerSize(1.);
-  graph_diff->Draw("AP");
+  plot_name = plot_path + "Difference_efficiency.pdf";
+  plot(c1, graph_diff, "Difference in efficiencies vs m_{U}", "#frac{m_{U}}{m_{e}}", "Difference in efficiencies [%]", &plot_name[0]);
   
-  c1->SaveAs("../plots/Difference_efficiency.pdf");
-  
+  ////////////////////////////////////////////////////////////////////////
+  plot_name = plot_path + "Energy_vs_mu.pdf";
+  plot(c1, graph_E, "Energy vs m_{U}", "#frac{m_{U}}{m_{e}}", "Energy #frac{E_{#gamma}}{E_{e}}", &plot_name[0]);
 
   ////////////////////////////////////////////////////////////////////////
-  graph_E->SetTitle("Energy vs m_{u}");
-  graph_E->GetXaxis()->SetTitle("#frac{m_{U}}{m_{e}}");
-  graph_E->GetYaxis()->SetTitle("Energy #frac{E_{#gamma}}{E_{e}}");
-  graph_E->SetMarkerStyle(20);
-  graph_E->SetMarkerSize(1.);
-  graph_E->Draw("AP");
-  
-  c1->SaveAs("../plots/Energy_vs_mu.pdf");
-
-  ////////////////////////////////////////////////////////////////////////
-  gPad->SetLeftMargin(.13);
-  graph_pur->SetTitle(" ");
-  graph_pur->GetXaxis()->SetTitle("#frac{m_{U}}{m_{e}}");
-  graph_pur->GetYaxis()->SetTitle("Purity #frac{N_{sig}}{N_{sig}+N_{bkg}}");
-  graph_pur->GetYaxis()->SetTitleOffset(1.3);
-  graph_pur->SetMarkerStyle(20);
-  graph_pur->SetMarkerColor(kViolet);
-  graph_pur->SetMarkerSize(1.);
-  graph_pur->Draw("AP");
-
-  c1->SaveAs("../plots/Purity_vs_mu.pdf");
+  plot_name = plot_path + "Purity_vs_mu.pdf";
+  plot(c1, graph_pur, " ", "#frac{m_{U}}{m_{e}}", "Purity #frac{N_{sig}}{N_{sig}+N_{bkg}}", &plot_name[0]);
   
   ///////////////////////////////////////////////////////////////////////
-  gPad->SetLeftMargin(.13);
-  graph_pur_vs_min->SetTitle("m_{U} = 715.4 keV");
-  graph_pur_vs_min->GetXaxis()->SetTitle("E_{min} [keV]");
-  graph_pur_vs_min->GetYaxis()->SetTitle("[%]");
-  graph_pur_vs_min->GetYaxis()->SetTitleOffset(1.3);
-  graph_pur_vs_min->GetYaxis()->SetRangeUser(0, 101);
-  graph_pur_vs_min->SetMarkerStyle(20);
-  graph_bkg_vs_min->SetMarkerStyle(20);
-  graph_eff_vs_min->SetMarkerStyle(20);
-  graph_pur_vs_min->SetMarkerColor(kViolet);
-  graph_bkg_vs_min->SetMarkerColor(kBlack);
-  graph_eff_vs_min->SetMarkerColor(kRed);
-  graph_pur_vs_min->SetMarkerSize(1.);
-  graph_pur_vs_min->Draw("AP");
-  graph_eff_vs_min->Draw("same P");
-  graph_bkg_vs_min->Draw("same P");
-
-  auto legend1 = new TLegend(0.7,0.7,0.90,0.95);
-  legend1->AddEntry(graph_eff_vs_min,"#varepsilon_{sig}","p");
-  legend1->AddEntry(graph_bkg_vs_min,"#varepsilon_{bkg}","p");
-  legend1->AddEntry(graph_pur_vs_min, "purity #frac{#varepsilon_{sig}}{#varepsilon_{sig}+#varepsilon_{bkg}}", "p");
-  legend1->SetTextSize(0.035);
-  legend1->Draw();
-
-  c1->SaveAs("../plots/Purity_vs_min.pdf");
-
+  plot_name = plot_path + "Purity_vs_min.pdf";
+  stringstream s;
+  s<<2*me*m[ind];
+  plot_title = "m_{U} = "+s.str()+" [keV]"; 
+  plot3(c1, graph_pur_vs_min, "purity #frac{#varepsilon_{sig}}{#varepsilon_{sig}+#varepsilon_{bkg}}", graph_bkg_vs_min, "#varepsilon_{bkg}", graph_eff_vs_min, "#varepsilon_{sig}", &plot_title[0], "E_{min} [keV]", "[%]", &plot_name[0]);
 }

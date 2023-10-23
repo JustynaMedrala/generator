@@ -43,20 +43,6 @@ double en_dep(TF1* f, double E0){
     return (E0-Ek);
 }
 
-void fill_hist_from_file(const char* filename , TH1* hist_ops_energy)
-{
-  double energy = 0;
-  std::unique_ptr<TFile> hfile( TFile::Open(filename,"READ") );
-  TTree *tree = hfile->Get<TTree>("T");
-  tree->SetBranchAddress("Energy_att",&energy);
-
-  int nentries = tree->GetEntries();
-
-  for(int i = 0; i < nentries; i++){
-    tree->GetEntry(i);
-    hist_ops_energy->Fill(energy);
-  }
-}
 
 
 double helperTerm(double E0, double theta)
@@ -106,6 +92,22 @@ void test_energy_function()
   hist_Edep->Draw();
 }
 
+void fill_hist_from_file(const char* filename , TH1* hist_ops_energy)
+{
+  double energy = 0;
+  std::unique_ptr<TFile> hfile( TFile::Open(filename,"READ") );
+  TTree *tree = hfile->Get<TTree>("T");
+  tree->SetBranchAddress("E_0",&energy);
+
+  int nentries = tree->GetEntries();
+
+  for(int i = 0; i < nentries; i++){
+    tree->GetEntry(i);
+    hist_ops_energy->Fill(energy);
+  }
+}
+
+
 void energy() {
   TRandom3 gen;
   gen.SetSeed(0);
@@ -113,18 +115,26 @@ void energy() {
   double E0 = 1;
   double Ek = 0;
   double Edep = E0 - Ek;
-  int N = int(1e3);
+  int N = int(1);
   double sigma = 0;
-  hist_Edep = new TH1F("hist_Edep","hist_Edep",100,0,1274);
-  hist_Edep_s = new TH1F("hist_Edep_smear", "hist_Edep_smear", 100, 0, 1274);
-  hist_Edep_deex = new TH1F("hist_Edep_deex", "hist_Edep_deex", 100, 0, 1274);
-  hist_Edep_deex_s = new TH1F("hist_Edep_deex_smear", "hist_Edep_deex_smear", 100, 0, 1274);
-  hist_Ek = new TH1F("hist_Ek","hist_Ek",100, 0,1.5);
-  hist_ops_energy = new TH1F("hist_ops_energy", "hist_ops_energy", 100, 0, 1274);
-  hist_Edep_color = new TH1F("hist_Edep_color","hist_Edep_color",100,0,1274);
-  hist_Edep_color_s = new TH1F("hist_Edep_color_s","hist_Edep_color_s",100,0,1274);
+  int num_bins = 200;
+  hist_Edep = new TH1F("hist_Edep","hist_Edep",num_bins,0,1274);
+  hist_Edep_s = new TH1F("hist_Edep_smear", "hist_Edep_smear", num_bins, 0, 1274);
+  hist_Edep_deex = new TH1F("hist_Edep_deex", "hist_Edep_deex", num_bins, 0, 1274);
+  hist_Edep_deex_s = new TH1F("hist_Edep_deex_smear", "hist_Edep_deex_smear", num_bins, 0, 1274);
+  hist_Ek = new TH1F("hist_Ek","hist_Ek",num_bins, 0,1.5);
+  hist_ops_energy = new TH1F("hist_ops_energy", "hist_ops_energy", 200, 0, 520);
+  hist_Edep_color = new TH1F("hist_Edep_color","hist_Edep_color",num_bins,0,1274);
+  hist_Edep_color_s = new TH1F("hist_Edep_color_s","hist_Edep_color_s",num_bins,0,1274);
 
-  fill_hist_from_file("energies.root","Energy", hist_ops_energy);
+
+  //TFile *hfile = 0;
+  //hfile = TFile::Open("energies.root","READ");
+  //TTree *tree = hfile->Get<TTree>("T");
+  //tree->SetBranchAddress("Energy",&Energy);
+
+  //hist_ops_energy = (TH1F*)hfile->Get("h_att");
+  fill_hist_from_file("energies.root", hist_ops_energy);
   cout<<"bkg: "<< hist_ops_energy->Integral(0.3*511, 0.8*511)/hist_ops_energy->Integral()<<endl; 
 
   for(int i = 0; i<N; i++){
@@ -150,7 +160,7 @@ void energy() {
   }
   /////////////////////////////////
   hist_Edep_deex_s->Scale(1.0/hist_Edep_deex_s->GetEntries());
-  hist_ops_energy->Scale(1.0/hist_ops_energy->GetEntries());
+  //hist_ops_energy->Scale(1.0/hist_ops_energy->GetEntries());
   hist_Edep_s->Scale(1.0/hist_Edep->GetEntries());
   hist_Edep->Scale(1.0/hist_Edep->GetEntries());
   hist_Edep_deex->Scale(1.0/hist_Edep_deex->GetEntries());
@@ -169,17 +179,17 @@ void energy() {
   f->Draw();
   c->SaveAs("../plots/f(theta).pdf");
   ///////////////////////////////////
-  auto *l_tres = new TLine(50,0,50,0.25);
-  auto *l_min = new TLine(0.3*511, 0, 0.3*511, 0.25);
-  auto *l_max = new TLine(0.8*511, 0, 0.8*511, 0.25);
+  auto *l_tres = new TLine(50,0,50,0.1);
+  auto *l_min = new TLine(0.3*511, 0, 0.3*511, 0.1);
+  auto *l_max = new TLine(0.8*511, 0, 0.8*511, 0.1);
   l_tres->SetLineWidth(2);
   l_min->SetLineWidth(2);
   l_max->SetLineWidth(2);
   ///////////////////////////////////
   hist_Edep_color_s->SetFillStyle(1001);
   hist_ops_energy->SetTitle("   ");
-  hist_ops_energy->GetXaxis()->SetTitle("E_{dep} [keV]");
-  hist_ops_energy->GetYaxis()->SetRangeUser(0, 0.14);
+  hist_ops_energy->GetXaxis()->SetTitle("E [keV]");
+  //hist_ops_energy->GetYaxis()->SetRangeUser(0, 0.14);
   hist_ops_energy->SetLineColor(kGreen);
   hist_Edep_color_s->SetFillColorAlpha(kBlack, 0.3);
   hist_Edep_deex_s->SetLineColor(kViolet);
@@ -206,7 +216,7 @@ void energy() {
   hist_Edep_color->SetFillStyle(1001);
   hist_Edep_color->SetFillColorAlpha(kBlack, 0.3);
   hist_Edep_deex->SetLineColor(kViolet);
-  hist_ops_energy->GetYaxis()->SetRangeUser(0, 0.3);
+  //hist_ops_energy->GetYaxis()->SetRangeUser(0, 0.3);
   hist_ops_energy->Draw("hist");
   hist_Edep->Draw("same hist");
   hist_Edep_deex->Draw("same hist");
@@ -216,7 +226,7 @@ void energy() {
   l_max->Draw("same");
 
   auto legend1 = new TLegend(0.65,0.7,0.9,0.9);
-  legend1->AddEntry(hist_Edep,"energy with smear","l");
+  legend1->AddEntry(hist_Edep,"energy without smear","l");
   legend1->AddEntry(hist_ops_energy,"energy for o-Ps","l");
   legend->AddEntry(hist_Edep_deex, "deexcitation energy", "l");
   legend1->AddEntry(l_tres, "detector threshold", "l");
@@ -246,6 +256,8 @@ void energy() {
   hist_Edep->Draw("hist");
   c->SaveAs("E_dep.pdf");
 
+  hist_ops_energy->GetYaxis()->SetTitle("Counts");
+  hist_ops_energy->SetLineColor(kBlue);
   hist_ops_energy->Draw("hist");
   c->SaveAs("../plots/E_ops.pdf");
 }
